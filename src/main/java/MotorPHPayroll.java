@@ -27,12 +27,15 @@ public class MotorPHPayroll {
     String[] employeeName = new String[100];
     String[] birthDay = new String[100];
     double[] hourlyRate = new double[100];
+    double[]totalHours = new double[100];
     
-    //File Reading
+//************************************************************************
+//EMPLOYEE LOADING
+//************************************************************************
     
     try{
     
-    BufferedReader br = new BufferedReader(new FileReader("employees.csv"));
+    BufferedReader br = new BufferedReader(new FileReader("employees.csv"));  
     
     br.readLine();
     
@@ -57,6 +60,67 @@ public class MotorPHPayroll {
         System.out.println("Error: " + e.getMessage());
     }
     
+//**********************************************************************
+//ATTENDANCE LOGIC
+//**********************************************************************
+    
+    try {
+    BufferedReader br2 = new BufferedReader(new FileReader("attendance.csv"));
+    br2.readLine();
+
+    while ((line = br2.readLine()) != null) {
+        String[] data = line.split(",");
+
+        int empID = Integer.parseInt(data[0]);
+        String date = data[3];      // 6/3/2024
+        String logIn = data[4];     // 8:59
+        String logOut = data[5];    // 18:31
+
+        // =========================
+        // GET MONTH
+        // =========================
+        String[] dateParts = date.split("/");
+        int month = Integer.parseInt(dateParts[0]);
+
+        if (month < 6 || month > 12) continue;
+
+        // =========================
+        // CONVERT TIME
+        // =========================
+        String[] inParts = logIn.split(":");
+        double timeIn = Integer.parseInt(inParts[0]) + Integer.parseInt(inParts[1]) / 60.0;
+
+        String[] outParts = logOut.split(":");
+        double timeOut = Integer.parseInt(outParts[0]) + Integer.parseInt(outParts[1]) / 60.0;
+
+        // =========================
+        // APPLY 8AM–5PM RULE
+        // =========================
+        double start = Math.max(timeIn, 8.0);
+        double end = Math.min(timeOut, 17.0);
+
+        double hoursWorked = 0;
+        if (end > start) {
+            hoursWorked = end - start;
+        }
+
+        // =========================
+        // MATCH EMPLOYEE
+        // =========================
+        for (int i = 0; i < count; i++) {
+            if (employeeID[i] == empID) {
+                totalHours[i] += hoursWorked;
+                break;
+            }
+        }
+    }
+
+    br2.close();
+
+} catch (Exception e) {
+    System.out.println("Attendance Error: " + e.getMessage());
+}
+    
     //Login 
    
         Scanner input = new Scanner(System.in);
@@ -73,6 +137,7 @@ public class MotorPHPayroll {
             
             int choice;
             
+            
                    //Employee's menu
             do{
                 System.out.println("---Employee Menu0--");
@@ -84,29 +149,52 @@ public class MotorPHPayroll {
                 
                           //If employee will press 1
                 if(choice == 1){
-                    System.out.print("Enter your Employee ID: ");
-                    int searchID = input.nextInt();
-                    
-                    boolean found = false;
-                    
-                    for(int i = 0; i < count; i++){
-                        if(employeeID[i] == searchID){
-                            System.out.println("Employee Found!");
-                            System.out.println("Employee ID: " + employeeID[i]);                    
-                            System.out.println("Employee Name: "  + employeeName[i]);
-                            System.out.println("Birthday: " + birthDay[i]);
-                            System.out.println("Hourly Rate: " + hourlyRate[i]);
-                            
-                            found = true;
-                            break;
-                            
-                        }
-                                
-                    }
-                    
-                    if(!found){
-                        System.out.println("Employee number does not exist!");
-                    }
+    System.out.print("Enter employee id: ");
+    int searchID = input.nextInt();
+
+    boolean found = false;
+
+    for(int i = 0; i < count; i++){
+        if(employeeID[i] == searchID){
+
+            found = true;
+
+            double grossPay = totalHours[i] * hourlyRate[i];
+
+            double sss = 0;
+            if (grossPay <= 3250) sss = 135;
+            else if (grossPay <= 3750) sss = 157.5;
+            else if (grossPay <= 4250) sss = 180;
+
+            double philhealth = grossPay * 0.02;
+            double pagibig = 100;
+
+            double tax = 0;
+            if (grossPay > 20833) {
+                tax = (grossPay - 20833) * 0.20;
+            }
+
+            double deductions = sss + philhealth + pagibig + tax;
+            double netPay = grossPay - deductions;
+
+            System.out.println("\n===== EMPLOYEE PAYROLL =====");
+            System.out.println("Employee ID: " + employeeID[i]);
+            System.out.println("Name: " + employeeName[i]);
+            System.out.println("Total Hours: " + totalHours[i]);
+            System.out.println("Gross Pay: " + grossPay);
+            System.out.println("SSS: " + sss);
+            System.out.println("PhilHealth: " + philhealth);
+            System.out.println("Pag-IBIG: " + pagibig);
+            System.out.println("Tax: " + tax);
+            System.out.println("Net Pay: " + netPay);
+
+            break;
+        }
+    }
+
+    if(!found){
+        System.out.println("Employee number does not exist!");
+    }
                     
                     //If employee chose 2 (exit)
                 }else if(choice == 2){
@@ -149,35 +237,86 @@ public class MotorPHPayroll {
                         subChoice = input.nextInt();
                         
                         // Under option 1, one employee
-                        if(subChoice ==1){
-                            System.out.print("Enter employee id: ");
+                        if(subChoice == 1){
+                            System.out.print("Enter employee ID: ");
                             int searchID = input.nextInt();
                             
                             boolean found = false;
                             
-                            //finding the employee ID from array
-                            
                             for(int i = 0; i < count; i++){
                                 if(employeeID[i] == searchID){
-                                    System.out.println("Employee Found!");
-                                    System.out.println("Employee ID: " + employeeID[i]);
-                                    System.out.println("Employee Name: " + employeeName[i]);
-                                           
                                     found = true;
-                                    break;
+                                    
+                                    double grossPay = totalHours[i] * hourlyRate[i];
+                                    double sss = 0;
+                                    if(grossPay <= 3250) sss = 135;
+                                    else if(grossPay <= 3750) sss = 157.5;
+                                    else if(grossPay <= 4250) sss = 180;
+                                    
+                                    double philhealth = grossPay * 0.02;
+                                    double pagibig = 100;
+
+                                    double tax = 0;
+                                    if (grossPay > 20833) {
+                                    tax = (grossPay - 20833) * 0.20;
+                                    
                                 }
+                                     double netPay = grossPay - (sss + philhealth + pagibig + tax);
+
+                                     System.out.println("\n===== PAYROLL =====");
+                                     System.out.println("Employee ID: " + employeeID[i]);
+                                     System.out.println("Name: " + employeeName[i]);
+                                     System.out.println("Total Hours: " + totalHours[i]);
+                                     System.out.println("Gross Pay: " + grossPay);
+                                     System.out.println("SSS: " + sss);
+                                     System.out.println("PhilHealth: " + philhealth);
+                                     System.out.println("Pag-IBIG: " + pagibig);
+                                     System.out.println("Tax: " + tax);
+                                     System.out.println("Net Pay: " + netPay);
+
+                                     break;
+                                    }
                             }if(!found){
-                            System.out.println("Employee number does not exist!");
-                        }
-                        
+                                System.out.println("Employee number does not exist!");
+                               
+                            }
+
                             
-                            //Should be printing all employee payroll
+//****************************************************
+//Should be printing all employee payroll
+//****************************************************
                         }else if(subChoice == 2){
                             for(int i = 0; i < count; i++){
-                                System.out.println("Employee ID: " + employeeID[i] + " | Employee Name: " + employeeName[i]);
+                                double grossPay = totalHours[i] * hourlyRate[i];
+                                double sss = 0;
+                                if (grossPay <= 3250) sss = 135;
+                                else if (grossPay <= 3750) sss = 157.5;
+                                else if (grossPay <= 4250) sss = 180;
                                 
+                                double philhealth = grossPay * 0.02;
+                                double pagibig = 100;
+                                double tax = 0;
+                                if (grossPay > 20833) {
+                                tax = (grossPay - 20833) * 0.20;
+        
+    }
+    
+
+
+    double netPay = grossPay - (sss + philhealth + pagibig + tax);
+
+    System.out.println("\n=======================");
+    System.out.println("Employee ID: " + employeeID[i]);
+    System.out.println("Name: " + employeeName[i]);
+    System.out.println("Total Hours: " + totalHours[i]);
+    System.out.println("Gross Pay: " + grossPay);
+    System.out.println("Net Pay: " + netPay);
+}
                                 
-                            }
+
+    
+
+    
                             //Exiting, going back to previous page
                         }else if(subChoice == 3){
                             System.out.println("Returning to Payroll Menu...");
@@ -203,12 +342,17 @@ public class MotorPHPayroll {
        
         
       
+         }else{
+             System.out.println("Invalid username and/or password");
+             
          }
          }
-  
+   
                 
   
-            }
+            
+}
+
 
            
         
